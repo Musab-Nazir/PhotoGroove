@@ -13,11 +13,15 @@ import PhotoGroove as Gallery
 type alias Model = {page: Page, key: Nav.Key}
 
 type Page
-  = Home
-  | Gallery
+  = HomePage
+  | GalleryPage Gallery.Model
   | NotFound
 
-parser : Parser.Parser (Page -> a) a
+type Route
+  = Home
+  | Gallery
+
+parser : Parser.Parser (Route -> a) a
 parser =
     Parser.oneOf
         [ Parser.map Home Parser.top
@@ -27,7 +31,15 @@ parser =
 view : Model -> Document Msg
 view model =
   let
-    content = text "This isn't even my final form!"
+    content =
+      case model.page of
+        HomePage ->
+          text "This is the home page"
+        GalleryPage gallery ->
+            Gallery.view gallery
+                |> Html.map GotGalleryMsg
+        NotFound ->
+          text "Not Found"
   in
   { title = "Photo Groove, SPA Style"
   , body =
@@ -52,24 +64,26 @@ viewHeader page =
         , navLink Gallery { url = "/gallery", caption = "Gallery" }
         ]
 
-    navLink : Page -> { url : String, caption : String } -> Html msg
-    navLink targetPage { url, caption } =
-      li [ classList [ ( "active", isActive {link = targetPage, page=page}) ] ]
+    navLink : Route -> { url : String, caption : String } -> Html msg
+    navLink route { url, caption } =
+      li [ classList [ ( "active", isActive {link = route, page=page}) ] ]
       [ a [ href url ] [ text caption ] ]
   in
     nav [] [ logo, links ]
 
-isActive : { link : Page, page : Page } -> Bool
+isActive : { link : Route, page : Page } -> Bool
 isActive { link, page } =
   case ( link, page ) of
-    ( Gallery, Gallery ) -> True
+    ( Gallery, GalleryPage _) -> True
     ( Gallery, _ ) -> False
-    ( Home, _ ) -> False
-    ( NotFound, _ ) -> False
+    ( Home, HomePage ) -> True
+    ( Home, GalleryPage _ ) -> False
+    ( _, NotFound ) -> False
 
 type Msg
   = ClickedLink Browser.UrlRequest
   | ChangedUrl Url
+  | GotGalleryMsg Gallery.Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -82,6 +96,17 @@ update msg model =
                 ( model, Nav.pushUrl model.key (Url.toString url) )
       ChangedUrl url ->
         ( { model | page = urlToPage url }, Cmd.none )
+      GotGalleryMsg galleryMsg ->
+        case model.page of 
+          GalleryPage gallery ->
+            toGallery model (Gallery.update galleryMsg gallery)
+          _ -> (model, Cmd.none)
+
+toGallery : Model -> ( Gallery.Model, Cmd Gallery.Msg ) -> ( Model, Cmd Msg ) 
+toGallery model ( gallery, cmd ) =
+  ( { model | page = GalleryPage gallery }
+  , Cmd.map GotGalleryMsg cmd
+  )
 
 subscriptions : Model -> Sub Msg
 subscriptions model = Sub.none
@@ -92,8 +117,13 @@ init flags url key =
 
 urlToPage : Url -> Page
 urlToPage url =
-  Parser.parse parser url
-      |> Maybe.withDefault NotFound
+    case Parser.parse parser url of
+        Just Gallery ->
+            GalleryPage (Tuple.first (Gallery.init ()))
+        Just Home ->
+          HomePage
+        Nothing ->
+          NotFound
 
 main : Program () Model Msg
 main =

@@ -1,4 +1,4 @@
-module PhotoGroove exposing (main)
+module PhotoGroove exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -101,11 +101,14 @@ update msg model =
     GotSelectedIndex index ->
       ({ model | selectedUrl = getPhotoUrl index}, Cmd.none)
 
+init flags =
+  ( initialModel, Cmd.none )
+
 -- MAIN
 main : Program () Model Msg
 main = 
   Browser.element
-    { init = \flags -> (initialModel, Cmd.none)
+    { init = init
     , view = view
     , update = update
     , subscriptions = \model -> Sub.none
