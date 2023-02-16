@@ -4,6 +4,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Browser
+import Array exposing(Array)
+import Random
 
 -- VIEW
 view: Model -> Html Msg
@@ -22,6 +24,10 @@ view model =
 
 type alias Photo = {url: String}
 
+photoArray : Array Photo
+photoArray =
+    Array.fromList initialModel.photos
+
 type ThumbnailSize  
   = Small
   | Medium
@@ -31,20 +37,10 @@ type Msg
   = ClickedPhoto String
   | ClickedSize ThumbnailSize
   | ClickedSurpriseMe
+  | GotSelectedIndex Int
 
 type alias Model = {photos: List Photo, selectedUrl: String, chosenSize: ThumbnailSize}
 
--- MODEL
-initialModel: Model
-initialModel =
-  { photos =
-      [ { url = "1.jpeg" }
-      , { url = "2.jpeg" }
-      , { url = "3.jpeg" }
-      ]
-      , selectedUrl = "1.jpeg"
-      , chosenSize = Medium
-  }
 
 urlPrefix : String
 urlPrefix = "http://elm-in-action.com/"
@@ -71,21 +67,46 @@ sizeToString size =
       Large ->
         "large"
 
+randomPhotoPicker : Random.Generator Int
+randomPhotoPicker = Random.int 0 (Array.length photoArray - 1)
+
+getPhotoUrl : Int -> String
+getPhotoUrl index =
+  case Array.get index photoArray of
+    Just photo -> photo.url
+    Nothing -> ""
+
+-- MODEL
+initialModel: Model
+initialModel =
+  { photos = 
+      [ { url = "1.jpeg" }
+      , { url = "2.jpeg" }
+      , { url = "3.jpeg" }
+      ]
+      , selectedUrl = "1.jpeg"
+      , chosenSize = Medium
+  }
+
 -- UPDATE
-update: Msg -> Model -> Model
+update: Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
     ClickedPhoto url ->
-      { model | selectedUrl = url }
+      ({ model | selectedUrl = url }, Cmd.none)
     ClickedSurpriseMe ->
-      { model | selectedUrl = "2.jpeg" }
+      ( model, Random.generate GotSelectedIndex randomPhotoPicker)
     ClickedSize size ->
-      { model | chosenSize = size }
+      ({ model | chosenSize = size }, Cmd.none)
+    GotSelectedIndex index ->
+      ({ model | selectedUrl = getPhotoUrl index}, Cmd.none)
 
 -- MAIN
+main : Program () Model Msg
 main = 
-  Browser.sandbox
-    { init = initialModel
+  Browser.element
+    { init = \flags -> (initialModel, Cmd.none)
     , view = view
     , update = update
+    , subscriptions = \model -> Sub.none
     }
