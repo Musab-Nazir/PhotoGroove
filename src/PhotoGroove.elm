@@ -8,13 +8,16 @@ import Browser
 -- VIEW
 view: Model -> Html Msg
 view model =
-    div [ class "content" ]
-        [ h1 [] [ text "Photo Groove" ]
-        , div [ id "thumbnails" ] (List.map (viewThumbnail model.selectedUrl) model.photos)
-        , img [class "large", src (urlPrefix ++ "large/" ++ model.selectedUrl)] []
-        ]
+  div [ class "content" ]
+      [ h1 [] [ text "Photo Groove" ]
+      , button
+          [ onClick { description = "ClickedSurpriseMe", data = "" } ]
+          [ text "Surprise Me!" ]
+      , div [ id "thumbnails" ] (List.map (viewThumbnail model.selectedUrl) model.photos)
+      , img [class "large", src (urlPrefix ++ "large/" ++ model.selectedUrl)] []
+  ]
 
-type alias Photo = { url : String}
+type alias Photo = {url : String}
 type alias Msg = {description: String, data: String}
 type alias Model = {photos : List Photo, selectedUrl : String}
 
@@ -40,9 +43,12 @@ viewThumbnail selectedUrl thumb =
 -- UPDATE
 update: Msg -> Model -> Model
 update msg model =
-  if msg.description == "ClickedPhoto" then
-        { model | selectedUrl = msg.data }
-  else model
+  case msg.description of 
+    "ClickedPhoto" ->
+      { model | selectedUrl = msg.data }
+    "ClickedSurpriseMe" ->
+      { model | selectedUrl = "2.jpeg" }
+    _-> model
 
 -- MAIN
 main = 
