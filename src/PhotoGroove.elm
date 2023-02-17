@@ -1,4 +1,4 @@
-module PhotoGroove exposing (Model, Msg, init, update, view)
+module PhotoGroove exposing (Model, Msg, init, update, view, photoDecoder)
 
 import Browser
 import Html exposing (..)
