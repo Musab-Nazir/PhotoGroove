@@ -10,7 +10,10 @@ import Url.Parser as Parser
 
 import PhotoGroove as Gallery
 
-type alias Model = {page: Page, key: Nav.Key}
+type alias Model = 
+  { page: Page
+  , key: Nav.Key
+  }
 
 type Page
   = HomePage
@@ -23,10 +26,10 @@ type Route
 
 parser : Parser.Parser (Route -> a) a
 parser =
-    Parser.oneOf
-        [ Parser.map Home Parser.top
-        , Parser.map Gallery (Parser.s "gallery")
-        ]
+  Parser.oneOf
+    [ Parser.map Home Parser.top
+    , Parser.map Gallery (Parser.s "gallery")
+    ]
 
 view : Model -> Document Msg
 view model =
@@ -95,7 +98,7 @@ update msg model =
               Browser.Internal url ->
                 ( model, Nav.pushUrl model.key (Url.toString url) )
       ChangedUrl url ->
-        ( { model | page = urlToPage url }, Cmd.none )
+        updateUrl url model
       GotGalleryMsg galleryMsg ->
         case model.page of 
           GalleryPage gallery ->
@@ -112,18 +115,18 @@ subscriptions : Model -> Sub Msg
 subscriptions model = Sub.none
 
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
-  ( { page = urlToPage url, key = key }, Cmd.none )
+init version url key =
+    updateUrl url { page = NotFound, key = key }
 
-urlToPage : Url -> Page
-urlToPage url =
-    case Parser.parse parser url of
-        Just Gallery ->
-            GalleryPage (Tuple.first (Gallery.init ()))
-        Just Home ->
-          HomePage
-        Nothing ->
-          NotFound
+updateUrl : Url -> Model -> ( Model, Cmd Msg )
+updateUrl url model =
+  case Parser.parse parser url of
+  Just Gallery ->
+      toGallery model (Gallery.init ())
+  Just Home ->
+      ( { model | page = HomePage }, Cmd.none )
+  Nothing ->
+      ( { model | page = NotFound }, Cmd.none )
 
 main : Program () Model Msg
 main =
